@@ -1,33 +1,117 @@
-//this is where deliverable 1 will be
-parser grammar deliverable1_parser;
-options { tokenVocab=deliverable1_lexer; }
+parser grammar deliverable2_parser;
+options { tokenVocab=deliverable2_lexer; }
 
-// program has one or more statements
-start: statement+ EOF;
+start:
+    //allows for new lines at top or bottom
+    (NEWLINE | statement)* EOF;
 
-// statements handle regular & compound assignments
-statement: VAR EQ expr
-    | VAR PLUS EQ expr
-    | VAR MINUS EQ expr
-    | VAR MULT EQ expr
-    | VAR DIV EQ expr;
+// STATEMENTS
+statement:
+    comment
+    | assStatement //assignment
+    | condStatement //if/elif/else block
+    | loopStatement;
 
-expr: additiveExpr;
+// COMMENTS
+comment:
+    COMMENT | LONGCOMM;
 
-// lowest precedence for addition & subtraction
-additiveExpr:
-    multiplicativeExpr ((PLUS | MINUS) multiplicativeExpr)*
-    ;
+// ASSIGNMENT STATEMENTS
+assStatement:
+    VAR EQ expr
+    | VAR PLUSEQ expr
+    | VAR MINUSEQ expr
+    | VAR MULTEQ expr
+    | VAR DIVEQ expr;
 
-// higher precedence (evaluated before add/sub)
-multiplicativeExpr:
+// EXPRESSIONS
+//ensures precedence between operators
+expr:
+    opExpr;
+
+// LOW PRECEDENCE EXPRESSIONS
+opExpr:
+    hiOpExpr ((PLUS | MINUS) hiOpExpr)*;
+   
+// HIGHER PRECEDENCE EXPRESSIONS
+hiOpExpr:
     primary ((MULT | DIV | REMAINDER) primary)*;
 
-// highest precedence
-primary: INT
+// PRIMARY (smallest evaluable units)
+primary:
+    INT
     | FLOAT
     | VAR
-    | CHAR
+    | STR
     | BOOL
-    | ARRAY
-    | LPAREN expr RPAREN;
+    | array
+    | NOT primary
+    //can use parentheses in if statements & arithmetic
+    | LPAR boolExpr RPAR
+    | LPAR expr RPAR;
+
+array: LBRACK (INT | FLOAT | STR | BOOL)?
+    (COMMA (INT | FLOAT | STR | BOOL))* RBRACK;
+
+// CONDITIONAL STATEMENTS
+condStatement:
+    ifBlock
+    (elifBlock)*
+    (elseBlock)?;
+    //block forces logic after if/else statements
+    //IF stateBlock
+    //(ELIF stateBlock)*
+    // can have any number of elif statements
+    //(ELSE elseBlock)?; // optional else statement
+
+ifBlock:
+    IF stateBlock;
+
+elifBlock:
+    ELIF stateBlock;
+
+stateBlock:
+    boolExpr COLON block;
+    
+elseBlock:
+    ELSE COLON block;
+
+// LOGICAL BLOCK
+//must be a new line + an indentation
+block:
+    NEWLINE INDENT statement //at least 1 statement in block
+    (NEWLINE INDENT statement)* //can have multiple statements in block
+    (NEWLINE (INDENT)?)*; //allows blank/non-indented lines in block
+
+// BOOLEAN EXPRESSION
+//one or more comparisons with optional and/ors
+boolExpr:
+    comp (conj comp)*;
+
+// COMPARISON
+//comparison can be just primary or primary < primary
+comp:
+    primary (compOp primary)?;
+
+// COMPARISON OPERATORS
+compOp:
+    LESS | GRTR | LESSEQ
+    | GRTREQ | EQEQ | NOTEQ;
+
+// CONJUNCTION OPERATORS
+conj:
+    AND | OR;
+
+forBlock:
+    VAR IN (primary | function) COLON block;
+
+function:
+    VAR LPAR arguments RPAR;
+
+loopStatement:
+    WHILE stateBlock
+    | FOR forBlock;
+
+arguments:
+    primary(COMMA primary)*;
+    
